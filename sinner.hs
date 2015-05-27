@@ -17,5 +17,11 @@ f1 .* f2 = \t -> (f1 t) * (f2 t)
 (./) :: Sinus -> Sinus -> Sinus
 f1 ./ f2 = \t -> if (f2 t) == 0 then 0 else (f1 t) / (f2 t)
 
-a :: Integer -> Float
-a 3 = 440
+computeFreq :: Floating a => a -> Integer -> a
+computeFreq base octave = base * (2**((fromInteger octave) - 3))
+
+a :: Floating a => Integer -> a
+a = computeFreq 440
+
+b :: Floating a => Integer -> a
+b = computeFreq 493.88
