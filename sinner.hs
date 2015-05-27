@@ -3,8 +3,6 @@ module Sinner where
 import Data.List
 import Data.Maybe
 
-type Sinus = (Float -> Float)
-
 data Note
     = C
     | CSharp
@@ -50,6 +48,8 @@ noteFreq BFlat = noteFreq ASharp
 noteFreq B = 493.88
 noteFreq CFlat = noteFreq B
 
+type Sinus = (Float -> Float)
+
 sinus :: Sinus -> Float -> Sinus
 sinus func freq = \t -> sin $ 2 * pi * freq * ((func t) / 44100)
 
@@ -64,6 +64,11 @@ f1 .* f2 = \t -> (f1 t) * (f2 t)
 
 (./) :: Sinus -> Sinus -> Sinus
 f1 ./ f2 = \t -> if (f2 t) == 0 then 0 else (f1 t) / (f2 t)
+
+adsr :: (Floating a, Eq a, Show a) => a -> a -> a -> a -> Sinus -> Sinus
+adsr accent decay sustain release sinus 
+    | accent + decay + sustain + release /= 1 = error $ "Wrong ADSR : " ++ show accent ++ show decay ++ show sustain ++ show release
+    | otherwise = sinus
 
 computeFreq :: (Floating a, Ord a) => a -> Integer -> a
 computeFreq base octave
