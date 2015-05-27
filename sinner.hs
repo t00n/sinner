@@ -5,9 +5,15 @@ import Sound.Pulse.Simple
 import Pulse
 import Sinus
 
+program :: StateT PulseState IO ()
+program = do 
+    tellPulse (sinus (\x -> x) 440) 1
+    tellPulse (sinus (\x -> x) 880) 1
+
 main :: IO ()
 main = do
-    s<-simpleNew Nothing "Sinner" Play Nothing "This is Sinner" (SampleSpec (F32 LittleEndian) 44100 1) Nothing Nothing
-    runStateT (tellPulse (sinus (\x -> x) 440) 1) (PulseState 44100 s)
-    simpleDrain s
-    simpleFree s
+    simple <- simpleNew Nothing "Sinner" Play Nothing "This is Sinner" (SampleSpec (F32 LittleEndian) 44100 1) Nothing Nothing
+    let state = PulseState 44100 simple
+    runStateT program state
+    simpleDrain simple
+    simpleFree simple
