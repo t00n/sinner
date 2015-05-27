@@ -48,22 +48,30 @@ noteFreq BFlat = noteFreq ASharp
 noteFreq B = 493.88
 noteFreq CFlat = noteFreq B
 
-type Sinus = (Float -> Float)
+type Sinus = [Float]
 
-sinus :: Sinus -> Float -> Sinus
-sinus func freq = \t -> sin $ 2 * pi * freq * ((func t) / 44100)
+sinus :: (Float -> Float) -> Float -> Float -> Sinus
+sinus func freq duration = [sin $ 2 * pi * freq * ((func t) / 44100) | t <- [0..duration * 44100]]
+
+zipWithDefault :: (Num a, Num b, Num c) 
+    => a -> b -> (a -> b -> c) -> [a] -> [b] -> [c]
+zipWithDefault da db f la lb = take len $ zipWith f la' lb' 
+                        where
+                            len = max (length la) (length lb)
+                            la' = la ++ (repeat da)
+                            lb' = lb ++ (repeat db)
 
 (.+) :: Sinus -> Sinus -> Sinus
-f1 .+ f2 = \t -> (f1 t) + (f2 t)
+f1 .+ f2 = zipWithDefault 0 0 (+) f1 f2
 
 (.-) :: Sinus -> Sinus -> Sinus
-f1 .- f2 = \t -> (f1 t) - (f2 t)
+f1 .- f2 = zipWithDefault 0 0 (-) f1 f2
 
 (.*) :: Sinus -> Sinus -> Sinus
-f1 .* f2 = \t -> (f1 t) * (f2 t)
+f1 .* f2 = zipWithDefault 1 1 (*) f1 f2
 
 (./) :: Sinus -> Sinus -> Sinus
-f1 ./ f2 = \t -> if (f2 t) == 0 then 0 else (f1 t) / (f2 t)
+f1 ./ f2 = zipWithDefault 1 1 (\x y -> if y == 0 then 0 else x / y) f1 f2
 
 adsr :: (Floating a, Eq a, Show a) => a -> a -> a -> a -> Sinus -> Sinus
 adsr accent decay sustain release sinus 

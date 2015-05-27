@@ -13,9 +13,9 @@ data PulseState = PulseState {
     simple :: Simple
 }
 
-play :: Sinus -> Float -> StateT PulseState IO ()
-play fsin duration = do 
+play :: Sinus -> StateT PulseState IO ()
+play fsin = do 
     state <- get
     let si = simple state
     let sa = sampling state
-    lift $ simpleWrite si ([fsin t | t <- [0..sa * duration]] :: [Float]) 
+    lift $ simpleWrite si fsin
