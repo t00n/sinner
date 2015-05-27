@@ -1,16 +1,13 @@
+
+import Control.Monad.Trans.State
+
 import Sound.Pulse.Simple
-import Prelude hiding ((+), (-), (/))
-
+import Pulse
 import Sinus
-
-exec :: Simple -> Sinus -> Float -> IO ()
-exec s f duration = do
-    simpleWrite s ([f t | t <- [0..44100 Prelude.* duration]] :: [Float])
 
 main :: IO ()
 main = do
     s<-simpleNew Nothing "Sinner" Play Nothing "This is Sinner" (SampleSpec (F32 LittleEndian) 44100 1) Nothing Nothing
-    --exec s (sinus id) 1
-    exec s ((sinus (\x -> x) 440) Sinus.* (sinus (\x -> x) 440)) 2
+    runStateT (tellPulse (sinus (\x -> x) 440) 1) (PulseState 44100 s)
     simpleDrain s
     simpleFree s
