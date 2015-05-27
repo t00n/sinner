@@ -1,19 +1,21 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Pulse where
 
-import Sound.Pulse.Simple
-import Control.Monad.Trans.Writer
 import Control.Monad.Trans.State
 import Control.Monad.Trans.Class
 
-import Sinus
+import Sound.Pulse.Simple
+
+import Sinner
 
 data PulseState = PulseState {
     sampling :: Float,
     simple :: Simple
 }
 
-tellPulse :: Sinus -> Float -> StateT PulseState IO ()
-tellPulse fsin duration = do 
+play :: Sinus -> Float -> StateT PulseState IO ()
+play fsin duration = do 
     state <- get
-    let s = simple state
-    lift $ simpleWrite s ([fsin t | t <- [0..44100 Prelude.* duration]] :: [Float])
+    let si = simple state
+    let sa = sampling state
+    lift $ simpleWrite si ([fsin t | t <- [0..sa * duration]] :: [Float]) 
