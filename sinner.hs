@@ -48,10 +48,29 @@ noteFreq BFlat = noteFreq ASharp
 noteFreq B = 493.88
 noteFreq CFlat = noteFreq B
 
-type Sinus = [Float]
+--data WaveForm
+--    = Sine
+--    | Square
+--    | Triangle
+--    | Sawtooth
 
-sinus :: (Float -> Float) -> Float -> Float -> Sinus
-sinus func freq duration = [sin $ 2 * pi * freq * ((func t) / 44100) | t <- [0..duration * 44100]]
+--data Signal = Signal {
+--    frequency :: Float,
+--    amplitude :: Float,
+--    phase :: Float,
+--    waveform :: WaveForm
+--}
+
+type Sinusoide = [Float]
+
+data AmplitudeModulator = AmplitudeModulator {
+    amFunction :: (Float -> Float),
+    amStart :: Float,
+    amEnd :: Float
+}
+
+sinusoide :: (Float -> Float) -> Float -> Float -> Sinusoide
+sinusoide func freq duration = [sin $ 2 * pi * freq * ((func t) / 44100) | t <- [0..duration * 44100]]
 
 zipWithDefault :: (Num a, Num b, Num c) 
     => a -> b -> (a -> b -> c) -> [a] -> [b] -> [c]
@@ -61,22 +80,37 @@ zipWithDefault da db f la lb = take len $ zipWith f la' lb'
                             la' = la ++ (repeat da)
                             lb' = lb ++ (repeat db)
 
-(.+) :: Sinus -> Sinus -> Sinus
+(.+) :: Sinusoide -> Sinusoide -> Sinusoide
 f1 .+ f2 = zipWithDefault 0 0 (+) f1 f2
 
-(.-) :: Sinus -> Sinus -> Sinus
+(.-) :: Sinusoide -> Sinusoide -> Sinusoide
 f1 .- f2 = zipWithDefault 0 0 (-) f1 f2
 
-(.*) :: Sinus -> Sinus -> Sinus
+(.*) :: Sinusoide -> Sinusoide -> Sinusoide
 f1 .* f2 = zipWithDefault 1 1 (*) f1 f2
 
-(./) :: Sinus -> Sinus -> Sinus
+(./) :: Sinusoide -> Sinusoide -> Sinusoide
 f1 ./ f2 = zipWithDefault 1 1 (\x y -> if y == 0 then 0 else x / y) f1 f2
 
-adsr :: (Floating a, Eq a, Show a) => a -> a -> a -> a -> Sinus -> Sinus
-adsr accent decay sustain release sinus 
+amplitudeModulation :: [AmplitudeModulator] -> Sinusoide -> Sinusoide
+amplitudeModulation (x:xs) sine = amplitudeModulation xs $ zipWith applyAM sine [0..]
+    where
+        f = amFunction x
+        start = amStart x
+        end = amEnd x
+        len = length sine
+        applyAM x i
+            | start <= i/lenfloat && i/lenfloat < end = x * ((f offset) / interval)
+            | otherwise = x
+            where
+                lenfloat = fromIntegral len
+                interval = end - start
+                offset = i - start
+
+adsr :: (Floating a, Eq a, Show a) => a -> a -> a -> a -> Sinusoide -> Sinusoide
+adsr accent decay sustain release sine 
     | accent + decay + sustain + release /= 1 = error $ "Wrong ADSR : " ++ show accent ++ show decay ++ show sustain ++ show release
-    | otherwise = sinus
+    | otherwise = sine
 
 computeFreq :: (Floating a, Ord a) => a -> Integer -> a
 computeFreq base octave
