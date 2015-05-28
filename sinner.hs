@@ -75,8 +75,8 @@ note n = computeFreq (noteFreq n)
 
 type Sinusoide = [Float]
 
-mkSinusoide :: (Float -> Float) -> Float -> Float -> Sinusoide
-mkSinusoide func freq duration = [sin $ 2 * pi * freq * ((func t) / 44100) | t <- [0..duration * 44100]]
+mkSinusoide :: (Float -> Float) -> (Float -> Float) -> Float -> Sinusoide
+mkSinusoide func freq duration = [sin $ 2 * pi * (freq (t*(1/duration))) * (func t) | t <- [0, (1/44100)..duration]]
 
 zipWithDefault :: (Num a, Num b, Num c) 
     => a -> b -> (a -> b -> c) -> [a] -> [b] -> [c]
