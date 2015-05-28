@@ -128,5 +128,8 @@ adsr adsrVars sine
     | otherwise = amplitudeModulation adsrVars sine
 
 
+clipping :: Float -> Sinusoide -> Sinusoide
+clipping threshold sine = map (\x -> if x > threshold || x < threshold*(-1) then 0 else x) sine
+
 distortion :: Float -> Sinusoide -> Sinusoide
-distortion threshold sine = map (\x -> if x > threshold || x < threshold*(-1) then 0 else x) sine
+distortion = clipping
