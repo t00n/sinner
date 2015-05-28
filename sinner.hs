@@ -109,8 +109,8 @@ amplitudeModulation (x:xs) sine = amplitudeModulation xs (zipWith applyAM sine [
             | otherwise = x
             where
                 lenfloat = fromIntegral len
-                interval = end - start
-                offset = i - start
+                interval = (end - start) * lenfloat
+                offset = i - start * lenfloat
 
 adsr :: [AmplitudeModulator] -> Sinusoide -> Sinusoide
 adsr adsrVars sine 
