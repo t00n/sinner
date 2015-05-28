@@ -1,0 +1,2 @@
+# sinner
+Synthetiser in Haskell
