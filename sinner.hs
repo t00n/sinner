@@ -48,6 +48,16 @@ noteFreq BFlat = noteFreq ASharp
 noteFreq B = 493.88
 noteFreq CFlat = noteFreq B
 
+computeFreq :: (Floating a, Ord a) => a -> Integer -> a
+computeFreq base octave
+    | freq < 20 = computeFreq base (octave+1)
+    | freq > 20000 = computeFreq base (octave-1)
+    | otherwise = freq
+    where freq = base * (2**((fromInteger octave) - 3))
+
+note :: (Floating a, Ord a) => Note -> Integer -> a
+note n = computeFreq (noteFreq n)
+
 -- Sinusoides --
 
 --data WaveForm
@@ -117,12 +127,6 @@ adsr adsrVars sine
     | (sum $ map (\x -> amEnd x - amStart x) adsrVars) /= 1 = error $ "Wrong ADSR"
     | otherwise = amplitudeModulation adsrVars sine
 
-computeFreq :: (Floating a, Ord a) => a -> Integer -> a
-computeFreq base octave
-    | freq < 20 = computeFreq base (octave+1)
-    | freq > 20000 = computeFreq base (octave-1)
-    | otherwise = freq
-    where freq = base * (2**((fromInteger octave) - 3))
 
-note :: (Floating a, Ord a) => Note -> Integer -> a
-note n = computeFreq (noteFreq n)
+distortion :: Float -> Sinusoide -> Sinusoide
+distortion threshold sine = map (\x -> if x > threshold || x*(-1) < threshold*(-1) then 0 else x) sine

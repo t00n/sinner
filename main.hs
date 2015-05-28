@@ -19,9 +19,11 @@ main = do
     flip runStateT state (do 
         let sinusoide = (mkSinusoide id (note C 2) 0.3) .+ (mkSinusoide id (note C 3) 0.3)
         let afterMod = amplitudeModulation [AmplitudeModulator (\x -> x) 0 0.2,AmplitudeModulator (\x -> 1.0 - x/5) 0.2 0.3,AmplitudeModulator (\x -> 0.8) 0.2 0.8, AmplitudeModulator (\x -> 0.8 - x*4/5) 0.8 1.0] sinusoide
-        play afterMod
+        let afterDistortion = distortion 0.8 afterMod
+        play afterDistortion
         --liftIO $ plot sinusoide
         liftIO $ plot afterMod
+        liftIO $ plot afterDistortion
         )
     simpleDrain simple
     simpleFree simple
