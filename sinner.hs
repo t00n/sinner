@@ -1,13 +1,17 @@
+{-# LANGUAGE Rank2Types #-}
+
 module Sinner where
 
 import Data.List
 import System.Random
 import Math.FFT
-import Data.Complex
+import Math.FFT.Base (FFTWReal)
+import Data.Complex (Complex(..), realPart)
 import Data.Vector.Storable (unsafeToForeignPtr, fromList)
 import Data.Array.CArray.Base
 import Foreign.Marshal.Array (peekArray)
 import Foreign.ForeignPtr (withForeignPtr)
+import Foreign.Storable
 
 -- Notes --
 data Note
@@ -80,9 +84,7 @@ note n = computeFreq (noteFreq n)
 --    waveform :: WaveForm
 --}
 
-type Sinusoide = [Double]
-
-mkSinusoide :: (Double -> Double) -> (Double -> Double) -> Double -> Sinusoide
+mkSinusoide :: (Floating a, Enum a) => (a -> a) -> (a -> a) -> a -> [a]
 mkSinusoide func freq duration = [sin $ 2 * pi * (freq (t*(1/duration))) * (func t) | t <- [0, (1/44100)..duration]]
 
 zipWithDefault :: (Num a, Num b, Num c) 
@@ -93,27 +95,27 @@ zipWithDefault da db f la lb = take len $ zipWith f la' lb'
                             la' = la ++ (repeat da)
                             lb' = lb ++ (repeat db)
 
-(.+) :: Sinusoide -> Sinusoide -> Sinusoide
+(.+) :: Floating a => [a] -> [a] -> [a]
 f1 .+ f2 = zipWithDefault 0 0 (+) f1 f2
 
-(.-) :: Sinusoide -> Sinusoide -> Sinusoide
+(.-) :: Floating a => [a] -> [a] -> [a]
 f1 .- f2 = zipWithDefault 0 0 (-) f1 f2
 
-(.*) :: Sinusoide -> Sinusoide -> Sinusoide
+(.*) :: Floating a => [a] -> [a] -> [a]
 f1 .* f2 = zipWithDefault 1 1 (*) f1 f2
 
-(./) :: Sinusoide -> Sinusoide -> Sinusoide
+(./) :: (Floating a, Eq a) => [a] -> [a] -> [a]
 f1 ./ f2 = zipWithDefault 1 1 (\x y -> if y == 0 then 0 else x / y) f1 f2
 
 -- Amplitude Modulator --
 
 data AmplitudeModulator = AmplitudeModulator {
-    amFunction :: (Double -> Double),
-    amStart :: Double,
-    amEnd :: Double
+    amFunction :: forall a. (Floating a) => (a -> a),
+    amStart :: forall a. (Num a, Floating a) => a,
+    amEnd :: forall a. (Num a, Floating a) => a
 }
 
-amplitudeModulation :: [AmplitudeModulator] -> Sinusoide -> Sinusoide
+amplitudeModulation :: (Ord a, Enum a, Floating a) => [AmplitudeModulator] -> [a] -> [a]
 amplitudeModulation [] sine = sine
 amplitudeModulation (x:xs) sine = amplitudeModulation xs (zipWith applyAM sine [0..])
     where
@@ -129,21 +131,17 @@ amplitudeModulation (x:xs) sine = amplitudeModulation xs (zipWith applyAM sine [
                 interval = (end - start) * lenfloat
                 offset = i - start * lenfloat
 
-adsr :: [AmplitudeModulator] -> Sinusoide -> Sinusoide
+adsr :: (Integral a, Floating a) => [AmplitudeModulator] -> [a] -> [a]
 adsr adsrVars sine 
     | (sum $ map (\x -> amEnd x - amStart x) adsrVars) /= 1 = error $ "Wrong ADSR"
     | otherwise = amplitudeModulation adsrVars sine
 
 
-clipping :: Double -> Sinusoide -> Sinusoide
+clipping :: (Ord a, Floating a) => a -> [a] -> [a]
 clipping threshold sine = map (\x -> if x > threshold || x < threshold*(-1) then 0 else x) sine
 
-distortion :: Double -> Sinusoide -> Sinusoide
+distortion :: (Ord a, Floating a) => a -> [a] -> [a]
 distortion = clipping
-
--- Noise --
---whiteNoise :: Double -> Sinusoide
---whiteNoise duration = take (round (duration * 44100.0)) $ randomRs (-1.0,1.0) (mkStdGen 54)
 
 unsafeListToCArray xs =
     let (ptr, beg, end) = (unsafeToForeignPtr . fromList) xs
@@ -153,10 +151,13 @@ unsafeCArrayToList xs =
     let (size, ptr) = toForeignPtr xs
     in withForeignPtr ptr (peekArray size)
 
-whiteNoise :: Double -> IO Sinusoide
-whiteNoise duration = do
-    before <- unsafeListToCArray $ map (\x -> sqrt x :+ sqrt x) $ replicate (round $ duration * 44100) 2500
+mkNoise :: (Enum a, Floating a, Storable a, RealFrac a, FFTWReal a) => (a -> a) -> a -> IO [a]
+mkNoise func duration = do
+    before <- unsafeListToCArray $ map (\i -> func i :+ 0) [0..(duration * 44100.0)]
     after <- unsafeCArrayToList $ idft before
     return $ map realPart after
+
+mkWhiteNoise :: (Enum a, Floating a, RealFrac a, FFTWReal a) => a -> IO [a]
+mkWhiteNoise = mkNoise (\x -> 50)
 
 -- Filters --

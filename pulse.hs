@@ -13,7 +13,7 @@ data PulseState = PulseState {
     simple :: Simple
 }
 
-play :: Sinusoide -> StateT PulseState IO ()
+play :: [Double] -> StateT PulseState IO ()
 play fsin = do 
     state <- get
     let si = simple state
