@@ -1,6 +1,13 @@
 module Sinner where
 
 import Data.List
+import System.Random
+import Math.FFT
+import Data.Complex
+import Data.Vector.Storable (unsafeToForeignPtr, fromList)
+import Data.Array.CArray.Base
+import Foreign.Marshal.Array (peekArray)
+import Foreign.ForeignPtr (withForeignPtr)
 
 -- Notes --
 data Note
@@ -67,15 +74,15 @@ note n = computeFreq (noteFreq n)
 --    | Sawtooth
 
 --data Signal = Signal {
---    frequency :: Float,
---    amplitude :: Float,
---    phase :: Float,
+--    frequency :: Double,
+--    amplitude :: Double,
+--    phase :: Double,
 --    waveform :: WaveForm
 --}
 
-type Sinusoide = [Float]
+type Sinusoide = [Double]
 
-mkSinusoide :: (Float -> Float) -> (Float -> Float) -> Float -> Sinusoide
+mkSinusoide :: (Double -> Double) -> (Double -> Double) -> Double -> Sinusoide
 mkSinusoide func freq duration = [sin $ 2 * pi * (freq (t*(1/duration))) * (func t) | t <- [0, (1/44100)..duration]]
 
 zipWithDefault :: (Num a, Num b, Num c) 
@@ -101,9 +108,9 @@ f1 ./ f2 = zipWithDefault 1 1 (\x y -> if y == 0 then 0 else x / y) f1 f2
 -- Amplitude Modulator --
 
 data AmplitudeModulator = AmplitudeModulator {
-    amFunction :: (Float -> Float),
-    amStart :: Float,
-    amEnd :: Float
+    amFunction :: (Double -> Double),
+    amStart :: Double,
+    amEnd :: Double
 }
 
 amplitudeModulation :: [AmplitudeModulator] -> Sinusoide -> Sinusoide
@@ -128,8 +135,28 @@ adsr adsrVars sine
     | otherwise = amplitudeModulation adsrVars sine
 
 
-clipping :: Float -> Sinusoide -> Sinusoide
+clipping :: Double -> Sinusoide -> Sinusoide
 clipping threshold sine = map (\x -> if x > threshold || x < threshold*(-1) then 0 else x) sine
 
-distortion :: Float -> Sinusoide -> Sinusoide
+distortion :: Double -> Sinusoide -> Sinusoide
 distortion = clipping
+
+-- Noise --
+--whiteNoise :: Double -> Sinusoide
+--whiteNoise duration = take (round (duration * 44100.0)) $ randomRs (-1.0,1.0) (mkStdGen 54)
+
+unsafeListToCArray xs =
+    let (ptr, beg, end) = (unsafeToForeignPtr . fromList) xs
+    in unsafeForeignPtrToCArray ptr (beg, end)
+
+unsafeCArrayToList xs =
+    let (size, ptr) = toForeignPtr xs
+    in withForeignPtr ptr (peekArray size)
+
+whiteNoise :: Double -> IO Sinusoide
+whiteNoise duration = do
+    before <- unsafeListToCArray $ map (\x -> sqrt x :+ sqrt x) $ replicate (round $ duration * 44100) 2500
+    after <- unsafeCArrayToList $ idft before
+    return $ map realPart after
+
+-- Filters --
