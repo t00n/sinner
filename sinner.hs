@@ -1,6 +1,10 @@
 {-# LANGUAGE Rank2Types #-}
 
-module Sinner where
+module Sinner (
+    Note, note, mkSinusoide, (.+), (.-), (.*), (./), 
+    mkNoise, mkWhiteNoise,
+    AmplitudeModulator, amplitudeModulation, adsr, clipping, distortion)
+where
 
 import Data.List
 import System.Random
@@ -107,6 +111,24 @@ f1 .* f2 = zipWithDefault 1 1 (*) f1 f2
 (./) :: (Floating a, Eq a) => [a] -> [a] -> [a]
 f1 ./ f2 = zipWithDefault 1 1 (\x y -> if y == 0 then 0 else x / y) f1 f2
 
+-- Noise --
+unsafeListToCArray xs =
+    let (ptr, beg, end) = (unsafeToForeignPtr . fromList) xs
+    in unsafeForeignPtrToCArray ptr (beg, end)
+
+unsafeCArrayToList xs =
+    let (size, ptr) = toForeignPtr xs
+    in withForeignPtr ptr (peekArray size)
+
+mkNoise :: (Enum a, Floating a, Storable a, RealFrac a, FFTWReal a) => (a -> a) -> a -> IO [a]
+mkNoise func duration = do
+    before <- unsafeListToCArray $ map (\i -> func i :+ 0) [0..(duration * 44100.0)]
+    after <- unsafeCArrayToList $ idft before
+    return $ map realPart after
+
+mkWhiteNoise :: (Enum a, Floating a, RealFrac a, FFTWReal a) => a -> IO [a]
+mkWhiteNoise = mkNoise (\x -> 50)
+
 -- Amplitude Modulator --
 
 data AmplitudeModulator = AmplitudeModulator {
@@ -131,33 +153,16 @@ amplitudeModulation (x:xs) sine = amplitudeModulation xs (zipWith applyAM sine [
                 interval = (end - start) * lenfloat
                 offset = i - start * lenfloat
 
-adsr :: (Integral a, Floating a) => [AmplitudeModulator] -> [a] -> [a]
-adsr adsrVars sine 
+adsr :: (Enum a, Ord a, Floating a) => [AmplitudeModulator] -> [a] -> [a]
+adsr adsrVars 
     | (sum $ map (\x -> amEnd x - amStart x) adsrVars) /= 1 = error $ "Wrong ADSR"
-    | otherwise = amplitudeModulation adsrVars sine
+    | otherwise = amplitudeModulation adsrVars
 
 
 clipping :: (Ord a, Floating a) => a -> [a] -> [a]
-clipping threshold sine = map (\x -> if x > threshold || x < threshold*(-1) then 0 else x) sine
+clipping threshold = map (\x -> if x > threshold || x < threshold*(-1) then 0 else x)
 
 distortion :: (Ord a, Floating a) => a -> [a] -> [a]
 distortion = clipping
-
-unsafeListToCArray xs =
-    let (ptr, beg, end) = (unsafeToForeignPtr . fromList) xs
-    in unsafeForeignPtrToCArray ptr (beg, end)
-
-unsafeCArrayToList xs =
-    let (size, ptr) = toForeignPtr xs
-    in withForeignPtr ptr (peekArray size)
-
-mkNoise :: (Enum a, Floating a, Storable a, RealFrac a, FFTWReal a) => (a -> a) -> a -> IO [a]
-mkNoise func duration = do
-    before <- unsafeListToCArray $ map (\i -> func i :+ 0) [0..(duration * 44100.0)]
-    after <- unsafeCArrayToList $ idft before
-    return $ map realPart after
-
-mkWhiteNoise :: (Enum a, Floating a, RealFrac a, FFTWReal a) => a -> IO [a]
-mkWhiteNoise = mkNoise (\x -> 50)
 
 -- Filters --
