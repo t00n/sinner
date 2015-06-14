@@ -29,9 +29,9 @@ main = do
         --liftIO $ plot sinusoide
         --liftIO $ plot afterMod
         --liftIO $ plot afterDistortion
-        noise <- liftIO $ mkWhiteNoise 1.0
-        play noise
-        liftIO $ plot noise
+        --noise <- liftIO $ mkWhiteNoise 1.0
+        --play noise
+        --liftIO $ plot noise
         --liftIO $ plot $ mkWhiteNoise 1
         )
     simpleDrain simple

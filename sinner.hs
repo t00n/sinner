@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE Rank2Types, ImpredicativeTypes #-}
 
 module Sinner (
     Note, note, mkSinusoide, (.+), (.-), (.*), (./), 
@@ -132,10 +132,15 @@ mkWhiteNoise = mkNoise (\x -> 50)
 -- Amplitude Modulator --
 
 data AmplitudeModulator = AmplitudeModulator {
-    amFunction :: forall a. (Floating a) => (a -> a),
+    amFunction :: forall a. Floating a => (a -> a),
     amStart :: forall a. (Num a, Floating a) => a,
     amEnd :: forall a. (Num a, Floating a) => a
 }
+
+mkAmplitudeModulator :: [((forall a. Floating a => a -> a), 
+                        (forall a. (Num a, Floating a) => a),
+                        (forall a. (Num a, Floating a) => a))] -> [AmplitudeModulator]
+mkAmplitudeModulator = map (\(f, s, e) -> AmplitudeModulator f s e)
 
 amplitudeModulation :: (Ord a, Enum a, Floating a) => [AmplitudeModulator] -> [a] -> [a]
 amplitudeModulation [] sine = sine
