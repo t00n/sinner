@@ -1,10 +1,9 @@
 {-# LANGUAGE Rank2Types, ImpredicativeTypes #-}
 
-module Sinner 
---(
---    C, mkNote, mkSinusoide, (.+), (.-), (.*), (./), 
---    mkNoise, mkWhiteNoise, 
---    mkAmplitudeModulator, setAmplitudeModulation, setADSR, setClipping, setDistortion)
+module Sinner (
+    Note(..), mkNote, mkSinusoide, (.+), (.-), (.*), (./), 
+    mkNoise, mkWhiteNoise, 
+    mkAmplitudeModulator, setAmplitudeModulation, setADSR, setClipping, setDistortion)
 where
 
 import Data.List
