@@ -1,9 +1,10 @@
 {-# LANGUAGE Rank2Types, ImpredicativeTypes #-}
 
-module Sinner (
-    Note, note, mkSinusoide, (.+), (.-), (.*), (./), 
-    mkNoise, mkWhiteNoise,
-    AmplitudeModulator, amplitudeModulation, adsr, clipping, distortion)
+module Sinner 
+--(
+--    C, mkNote, mkSinusoide, (.+), (.-), (.*), (./), 
+--    mkNoise, mkWhiteNoise, 
+--    mkAmplitudeModulator, setAmplitudeModulation, setADSR, setClipping, setDistortion)
 where
 
 import Data.List
@@ -41,37 +42,37 @@ data Note
     | CFlat
     deriving (Show, Ord, Eq)
 
-noteFreq :: (Floating a, Ord a) => Note -> a
-noteFreq C = 261.23
-noteFreq CSharp = 277.18
-noteFreq DFlat = noteFreq CSharp
-noteFreq D = 293.66
-noteFreq DSharp = 311.13
-noteFreq EFlat = noteFreq DSharp
-noteFreq E = 329.63
-noteFreq ESharp = noteFreq F
-noteFreq FFlat = noteFreq E
-noteFreq F = 349.23
-noteFreq FSharp = 369.99
-noteFreq GFlat = noteFreq FSharp
-noteFreq G = 392.00
-noteFreq GSharp = 415.30
-noteFreq AFlat = noteFreq GSharp
-noteFreq A = 440
-noteFreq ASharp = 466.16
-noteFreq BFlat = noteFreq ASharp
-noteFreq B = 493.88
-noteFreq CFlat = noteFreq B
+baseFrequency :: (Floating a, Ord a) => Note -> a
+baseFrequency C = 261.23
+baseFrequency CSharp = 277.18
+baseFrequency DFlat = baseFrequency CSharp
+baseFrequency D = 293.66
+baseFrequency DSharp = 311.13
+baseFrequency EFlat = baseFrequency DSharp
+baseFrequency E = 329.63
+baseFrequency ESharp = baseFrequency F
+baseFrequency FFlat = baseFrequency E
+baseFrequency F = 349.23
+baseFrequency FSharp = 369.99
+baseFrequency GFlat = baseFrequency FSharp
+baseFrequency G = 392.00
+baseFrequency GSharp = 415.30
+baseFrequency AFlat = baseFrequency GSharp
+baseFrequency A = 440
+baseFrequency ASharp = 466.16
+baseFrequency BFlat = baseFrequency ASharp
+baseFrequency B = 493.88
+baseFrequency CFlat = baseFrequency B
 
-computeFreq :: (Floating a, Ord a) => a -> Integer -> a
-computeFreq base octave
-    | freq < 20 = computeFreq base (octave+1)
-    | freq > 20000 = computeFreq base (octave-1)
+frequencyOnOctave :: (Floating a, Ord a) => a -> Integer -> a
+frequencyOnOctave base octave
+    | freq < 20 = frequencyOnOctave base (octave+1)
+    | freq > 20000 = frequencyOnOctave base (octave-1)
     | otherwise = freq
     where freq = base * (2**((fromInteger octave) - 3))
 
-note :: (Floating a, Ord a) => Note -> Integer -> a
-note n = computeFreq (noteFreq n)
+mkNote :: (Floating a, Ord a) => Note -> Integer -> a
+mkNote n = frequencyOnOctave (baseFrequency n)
 
 -- Sinusoides --
 
@@ -142,9 +143,9 @@ mkAmplitudeModulator :: [((forall a. Floating a => a -> a),
                         (forall a. (Num a, Floating a) => a))] -> [AmplitudeModulator]
 mkAmplitudeModulator = map (\(f, s, e) -> AmplitudeModulator f s e)
 
-amplitudeModulation :: (Ord a, Enum a, Floating a) => [AmplitudeModulator] -> [a] -> [a]
-amplitudeModulation [] sine = sine
-amplitudeModulation (x:xs) sine = amplitudeModulation xs (zipWith applyAM sine [0..])
+setAmplitudeModulation :: (Ord a, Enum a, Floating a) => [AmplitudeModulator] -> [a] -> [a]
+setAmplitudeModulation [] sine = sine
+setAmplitudeModulation (x:xs) sine = setAmplitudeModulation xs (zipWith applyAM sine [0..])
     where
         f = amFunction x
         start = amStart x
@@ -158,16 +159,16 @@ amplitudeModulation (x:xs) sine = amplitudeModulation xs (zipWith applyAM sine [
                 interval = (end - start) * lenfloat
                 offset = i - start * lenfloat
 
-adsr :: (Enum a, Ord a, Floating a) => [AmplitudeModulator] -> [a] -> [a]
-adsr adsrVars 
-    | (sum $ map (\x -> amEnd x - amStart x) adsrVars) /= 1 = error $ "Wrong ADSR"
-    | otherwise = amplitudeModulation adsrVars
+setADSR :: (Enum a, Ord a, Floating a) => [AmplitudeModulator] -> [a] -> [a]
+setADSR xs 
+    | (sum $ map (\x -> amEnd x - amStart x) xs) /= 1 = error $ "Wrong ADSR"
+    | otherwise = setAmplitudeModulation xs
 
 
-clipping :: (Ord a, Floating a) => a -> [a] -> [a]
-clipping threshold = map (\x -> if x > threshold || x < threshold*(-1) then 0 else x)
+setClipping :: (Ord a, Floating a) => a -> [a] -> [a]
+setClipping threshold = map (\x -> if x > threshold || x < threshold*(-1) then 0 else x)
 
-distortion :: (Ord a, Floating a) => a -> [a] -> [a]
-distortion = clipping
+setDistortion :: (Ord a, Floating a) => a -> [a] -> [a]
+setDistortion = setClipping
 
 -- Filters --
